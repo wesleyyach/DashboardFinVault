@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, redirect
 from flask_cors import CORS
 import random
 from datetime import datetime, timedelta
@@ -100,22 +100,7 @@ def build_portfolio_data():
 
 @app.route("/")
 def home():
-    return send_from_directory("public", "index.html")
-
-
-@app.route("/index.html")
-def index_file():
-    return send_from_directory("public", "index.html")
-
-
-@app.route("/css/<path:filename>")
-def css_files(filename):
-    return send_from_directory("public/css", filename)
-
-
-@app.route("/js/<path:filename>")
-def js_files(filename):
-    return send_from_directory("public/js", filename)
+    return redirect("/index.html", code=307)
 
 
 @app.route("/api/portfolio", methods=["GET"])
@@ -131,15 +116,10 @@ def get_chart(ticker):
         return jsonify({"error": "Ticker not found"}), 404
 
     stock = STOCKS[ticker]
-    prices = generate_price_series(
-        stock["price"] * 0.88,
-        days=30,
-        volatility=stock["vol"]
-    )
+    prices = generate_price_series(stock["price"] * 0.88, days=30, volatility=stock["vol"])
 
     dates = []
     start = datetime.now() - timedelta(days=29)
-
     for i in range(30):
         d = start + timedelta(days=i)
         dates.append(d.strftime("%d/%m"))
