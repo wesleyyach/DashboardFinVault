@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinVault — Dashboard</title>
+
+  <!-- CSS externo -->
+  <link rel="stylesheet" href="/css/style.css" />
+
+  <!-- Chart.js via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- ══════════════════════════════════
+       SIDEBAR
+       ══════════════════════════════════ -->
+  <aside class="sidebar">
+    <div class="logo">FV</div>
+    <div class="nav-icon active" title="Dashboard">◈</div>
+    <div class="nav-icon" title="Mercado">◉</div>
+    <div class="nav-icon" title="Portfolio">◎</div>
+    <div class="nav-icon" title="Analytics">◇</div>
+    <div class="nav-icon" title="Relatórios" style="margin-top:auto">◻</div>
+    <div class="nav-icon" title="Config">⚙</div>
+  </aside>
+
+  <!-- ══════════════════════════════════
+       CONTEÚDO PRINCIPAL
+       ══════════════════════════════════ -->
+  <main class="main">
+
+    <!-- Header -->
+    <header>
+      <div>
+        <div class="page-title">
+          Fin<span>Vault</span>
+          <span style="font-size:16px;color:var(--muted);font-family:'DM Sans';font-weight:300"> — Dashboard</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="live-dot"></div>
+        <div class="date-badge" id="clock">--</div>
+      </div>
+    </header>
+
+    <!-- Índices de mercado -->
+    <div class="indices-bar" id="indices-bar">
+      <div class="index-chip"><span class="skeleton" style="width:60px"></span></div>
+      <div class="index-chip"><span class="skeleton" style="width:60px"></span></div>
+      <div class="index-chip"><span class="skeleton" style="width:60px"></span></div>
+      <div class="index-chip"><span class="skeleton" style="width:60px"></span></div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card" style="animation-delay:0.00s">
+        <div class="kpi-label">Patrimônio Total</div>
+        <div class="kpi-value" id="kpi-total">–</div>
+        <div class="kpi-sub"  id="kpi-daily">–</div>
+        <div class="kpi-icon">💼</div>
+      </div>
+      <div class="kpi-card" style="animation-delay:0.08s">
+        <div class="kpi-label">Lucro / Prejuízo</div>
+        <div class="kpi-value" id="kpi-pnl">–</div>
+        <div class="kpi-sub"  id="kpi-pnl-pct">–</div>
+        <div class="kpi-icon">📈</div>
+      </div>
+      <div class="kpi-card" style="animation-delay:0.16s">
+        <div class="kpi-label">Capital Investido</div>
+        <div class="kpi-value" id="kpi-invested">–</div>
+        <div class="kpi-sub" style="color:var(--muted)">valor aplicado</div>
+        <div class="kpi-icon">🏦</div>
+      </div>
+      <div class="kpi-card" style="animation-delay:0.24s">
+        <div class="kpi-label">Saldo em Caixa</div>
+        <div class="kpi-value" id="kpi-cash">–</div>
+        <div class="kpi-sub" style="color:var(--muted)">disponível</div>
+        <div class="kpi-icon">💵</div>
+      </div>
+    </div>
+
+    <!-- Grid principal: gráfico de preços + alocação -->
+    <div class="grid-main">
+
+      <!-- Gráfico de preços -->
+      <div class="panel" style="animation-delay:0.1s">
+        <div class="panel-header">
+          <div class="panel-title">Histórico de Preços</div>
+          <span class="panel-action" id="chart-info">–</span>
+        </div>
+        <div class="ticker-tabs" id="ticker-tabs">
+          <div class="ticker-tab skeleton" style="width:50px;height:26px;border:none"></div>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="priceChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Alocação -->
+      <div class="panel" style="animation-delay:0.15s">
+        <div class="panel-header">
+          <div class="panel-title">Alocação</div>
+          <span class="panel-action">detalhes →</span>
+        </div>
+        <div class="alloc-wrapper">
+          <canvas id="allocChart"></canvas>
+        </div>
+        <div class="alloc-legend" id="alloc-legend">
+          <div class="alloc-item"><div class="skeleton" style="width:80%"></div></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Grid inferior: movers + transações -->
+    <div class="grid-bottom">
+
+      <!-- Maiores movimentos -->
+      <div class="panel" style="animation-delay:0.2s">
+        <div class="panel-header">
+          <div class="panel-title">Maiores Movimentos</div>
+          <span class="panel-action">ver todos →</span>
+        </div>
+        <div id="movers-list">
+          <div class="mover-item">
+            <div class="skeleton" style="width:100%;height:32px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Últimas transações -->
+      <div class="panel" style="animation-delay:0.25s">
+        <div class="panel-header">
+          <div class="panel-title">Últimas Transações</div>
+          <span class="panel-action">histórico →</span>
+        </div>
+        <div id="txn-list">
+          <div class="txn-item">
+            <div class="skeleton" style="width:100%;height:32px"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Tabela de posições -->
+    <div class="panel" style="margin-top:20px; animation-delay:0.3s">
+      <div class="panel-header">
+        <div class="panel-title">Posições em Carteira</div>
+        <span class="panel-action">exportar →</span>
+      </div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Ativo</th>
+            <th>Qtd.</th>
+            <th>Preço Médio</th>
+            <th>Preço Atual</th>
+            <th>Valor Total</th>
+            <th>P&L</th>
+            <th>P&L %</th>
+          </tr>
+        </thead>
+        <tbody id="holdings-body">
+          <tr><td colspan="7"><div class="skeleton"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+
+  <!-- JavaScript externo — carregado após o DOM -->
+  <script src="/js/main.js"></script>
+
+</body>
+</html>
