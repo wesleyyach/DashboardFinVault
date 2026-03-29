@@ -4,7 +4,7 @@
    gráficos (Chart.js) e atualização dinâmica do DOM.
    ========================================================== */
 
-   const API = "/api";;
+   const API = "/api";
 
 /* ── Formatadores ── */
 const fmt  = n => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(n);
