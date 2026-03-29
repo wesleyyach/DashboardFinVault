@@ -1,7 +1,6 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, redirect
 from flask_cors import CORS
 import random
-import math
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
@@ -16,31 +15,38 @@ def generate_price_series(start_price, days=30, volatility=0.02):
         prices.append(round(prices[-1] * (1 + change), 2))
     return prices
 
+
 STOCKS = {
-    "AAPL":  {"name": "Apple Inc.",          "price": 189.45, "vol": 0.018},
-    "MSFT":  {"name": "Microsoft Corp.",     "price": 415.20, "vol": 0.016},
-    "GOOGL": {"name": "Alphabet Inc.",       "price": 178.90, "vol": 0.020},
-    "NVDA":  {"name": "NVIDIA Corp.",        "price": 875.30, "vol": 0.035},
-    "AMZN":  {"name": "Amazon.com Inc.",     "price": 198.70, "vol": 0.022},
-    "TSLA":  {"name": "Tesla Inc.",          "price": 241.10, "vol": 0.045},
-    "META":  {"name": "Meta Platforms",      "price": 513.80, "vol": 0.028},
+    "AAPL":  {"name": "Apple Inc.", "price": 189.45, "vol": 0.018},
+    "MSFT":  {"name": "Microsoft Corp.", "price": 415.20, "vol": 0.016},
+    "GOOGL": {"name": "Alphabet Inc.", "price": 178.90, "vol": 0.020},
+    "NVDA":  {"name": "NVIDIA Corp.", "price": 875.30, "vol": 0.035},
+    "AMZN":  {"name": "Amazon.com Inc.", "price": 198.70, "vol": 0.022},
+    "TSLA":  {"name": "Tesla Inc.", "price": 241.10, "vol": 0.045},
+    "META":  {"name": "Meta Platforms", "price": 513.80, "vol": 0.028},
     "BRK":   {"name": "Berkshire Hathaway", "price": 612.40, "vol": 0.012},
 }
 
 PORTFOLIO = {
-    "AAPL":  {"shares": 50,  "avg_cost": 165.30},
-    "MSFT":  {"shares": 30,  "avg_cost": 380.10},
-    "NVDA":  {"shares": 15,  "avg_cost": 620.00},
-    "TSLA":  {"shares": 20,  "avg_cost": 210.50},
-    "GOOGL": {"shares": 25,  "avg_cost": 155.00},
+    "AAPL":  {"shares": 50, "avg_cost": 165.30},
+    "MSFT":  {"shares": 30, "avg_cost": 380.10},
+    "NVDA":  {"shares": 15, "avg_cost": 620.00},
+    "TSLA":  {"shares": 20, "avg_cost": 210.50},
+    "GOOGL": {"shares": 25, "avg_cost": 155.00},
 }
 
 INDICES = {
-    "S&P 500":  {"value": 5248.50, "change": 0.58},
-    "NASDAQ":   {"value": 16432.80, "change": 0.92},
-    "DOW JONES":{"value": 39387.30, "change": 0.34},
-    "VIX":      {"value": 14.32,    "change": -3.21},
+    "S&P 500": {"value": 5248.50, "change": 0.58},
+    "NASDAQ": {"value": 16432.80, "change": 0.92},
+    "DOW JONES": {"value": 39387.30, "change": 0.34},
+    "VIX": {"value": 14.32, "change": -3.21},
 }
+
+
+@app.route("/")
+def home():
+    return redirect("/index.html", code=302)
+
 
 @app.route("/api/portfolio", methods=["GET"])
 def get_portfolio():
@@ -87,6 +93,7 @@ def get_portfolio():
         "holdings": sorted(holdings, key=lambda x: x["value"], reverse=True),
     })
 
+
 @app.route("/api/chart/<ticker>", methods=["GET"])
 def get_chart(ticker):
     stock = STOCKS.get(ticker.upper())
@@ -95,7 +102,10 @@ def get_chart(ticker):
 
     days = 30
     prices = generate_price_series(stock["price"] * 0.88, days, stock["vol"])
-    dates = [(datetime.today() - timedelta(days=days - i - 1)).strftime("%d/%m") for i in range(days)]
+    dates = [
+        (datetime.today() - timedelta(days=days - i - 1)).strftime("%d/%m")
+        for i in range(days)
+    ]
 
     return jsonify({
         "ticker": ticker.upper(),
@@ -106,6 +116,7 @@ def get_chart(ticker):
         "change": round(prices[-1] - prices[0], 2),
         "change_pct": round(((prices[-1] - prices[0]) / prices[0]) * 100, 2),
     })
+
 
 @app.route("/api/movers", methods=["GET"])
 def get_movers():
@@ -118,10 +129,12 @@ def get_movers():
             "name": data["name"],
             "price": price,
             "change_pct": change_pct,
-            "volume": f"{random.randint(15, 95)}.{random.randint(1,9)}M",
+            "volume": f"{random.randint(15, 95)}.{random.randint(1, 9)}M",
         })
+
     movers.sort(key=lambda x: abs(x["change_pct"]), reverse=True)
     return jsonify(movers[:6])
+
 
 @app.route("/api/indices", methods=["GET"])
 def get_indices():
@@ -135,35 +148,48 @@ def get_indices():
         })
     return jsonify(result)
 
+
 @app.route("/api/allocation", methods=["GET"])
 def get_allocation():
-    labels, values, colors = [], [], []
+    labels = []
+    values = []
+    colors = []
     color_palette = ["#C9A84C", "#E8C96C", "#A07830", "#D4B468", "#8B6520", "#F0DC90"]
+
     total = sum(
-        STOCKS[t]["price"] * p["shares"]
-        for t, p in PORTFOLIO.items()
-        if t in STOCKS
+        STOCKS[ticker]["price"] * position["shares"]
+        for ticker, position in PORTFOLIO.items()
+        if ticker in STOCKS
     )
-    for i, (ticker, pos) in enumerate(PORTFOLIO.items()):
-        val = STOCKS[ticker]["price"] * pos["shares"]
+
+    for i, (ticker, position) in enumerate(PORTFOLIO.items()):
+        value = STOCKS[ticker]["price"] * position["shares"]
         labels.append(ticker)
-        values.append(round((val / total) * 100, 1))
+        values.append(round((value / total) * 100, 1))
         colors.append(color_palette[i % len(color_palette)])
+
     labels.append("Cash")
     values.append(round((12450 / (total + 12450)) * 100, 1))
     colors.append("#555566")
-    return jsonify({"labels": labels, "values": values, "colors": colors})
+
+    return jsonify({
+        "labels": labels,
+        "values": values,
+        "colors": colors,
+    })
+
 
 @app.route("/api/transactions", methods=["GET"])
 def get_transactions():
-    txns = [
-        {"date": "28/03", "type": "BUY",  "ticker": "NVDA", "shares": 5,   "price": 862.10, "total": 4310.50},
-        {"date": "25/03", "type": "SELL", "ticker": "TSLA", "shares": 10,  "price": 248.90, "total": 2489.00},
-        {"date": "22/03", "type": "BUY",  "ticker": "AAPL", "shares": 15,  "price": 183.20, "total": 2748.00},
-        {"date": "18/03", "type": "BUY",  "ticker": "MSFT", "shares": 8,   "price": 408.50, "total": 3268.00},
-        {"date": "14/03", "type": "SELL", "ticker": "GOOGL","shares": 12,  "price": 171.30, "total": 2055.60},
+    transactions = [
+        {"date": "28/03", "type": "BUY", "ticker": "NVDA", "shares": 5, "price": 862.10, "total": 4310.50},
+        {"date": "25/03", "type": "SELL", "ticker": "TSLA", "shares": 10, "price": 248.90, "total": 2489.00},
+        {"date": "22/03", "type": "BUY", "ticker": "AAPL", "shares": 15, "price": 183.20, "total": 2748.00},
+        {"date": "18/03", "type": "BUY", "ticker": "MSFT", "shares": 8, "price": 408.50, "total": 3268.00},
+        {"date": "14/03", "type": "SELL", "ticker": "GOOGL", "shares": 12, "price": 171.30, "total": 2055.60},
     ]
-    return jsonify(txns)
+    return jsonify(transactions)
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
