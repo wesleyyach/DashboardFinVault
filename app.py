@@ -54,28 +54,7 @@ TRANSACTIONS = [
 ALLOCATION_COLORS = ["#C9A84C", "#E8C96C", "#A07830", "#D4B468", "#8B6520", "#555566"]
 
 
-@app.route("/")
-def home():
-    return send_from_directory("public", "index.html")
-
-
-@app.route("/index.html")
-def index_file():
-    return send_from_directory("public", "index.html")
-
-
-@app.route("/css/<path:filename>")
-def css_files(filename):
-    return send_from_directory("public/css", filename)
-
-
-@app.route("/js/<path:filename>")
-def js_files(filename):
-    return send_from_directory("public/js", filename)
-
-
-@app.route("/api/portfolio", methods=["GET"])
-def get_portfolio():
+def build_portfolio_data():
     holdings = []
     total_value = 0
     total_cost = 0
@@ -107,7 +86,7 @@ def get_portfolio():
     cash = 12450.00
     daily_change = round(random.uniform(-1200, 1800), 2)
 
-    return jsonify({
+    return {
         "total_value": round(total_value + cash, 2),
         "invested": round(total_cost, 2),
         "total_pnl": total_pnl,
@@ -116,19 +95,51 @@ def get_portfolio():
         "daily_change": daily_change,
         "daily_change_pct": round((daily_change / (total_value + cash)) * 100, 2),
         "holdings": sorted(holdings, key=lambda x: x["value"], reverse=True),
-    })
+    }
+
+
+@app.route("/")
+def home():
+    return send_from_directory("public", "index.html")
+
+
+@app.route("/index.html")
+def index_file():
+    return send_from_directory("public", "index.html")
+
+
+@app.route("/css/<path:filename>")
+def css_files(filename):
+    return send_from_directory("public/css", filename)
+
+
+@app.route("/js/<path:filename>")
+def js_files(filename):
+    return send_from_directory("public/js", filename)
+
+
+@app.route("/api/portfolio", methods=["GET"])
+def get_portfolio():
+    return jsonify(build_portfolio_data())
 
 
 @app.route("/api/chart/<ticker>", methods=["GET"])
 def get_chart(ticker):
     ticker = ticker.upper()
+
     if ticker not in STOCKS:
         return jsonify({"error": "Ticker not found"}), 404
 
     stock = STOCKS[ticker]
-    prices = generate_price_series(stock["price"] * 0.88, days=30, volatility=stock["vol"])
+    prices = generate_price_series(
+        stock["price"] * 0.88,
+        days=30,
+        volatility=stock["vol"]
+    )
+
     dates = []
     start = datetime.now() - timedelta(days=29)
+
     for i in range(30):
         d = start + timedelta(days=i)
         dates.append(d.strftime("%d/%m"))
@@ -147,28 +158,30 @@ def get_chart(ticker):
 
 @app.route("/api/allocation", methods=["GET"])
 def get_allocation():
-    portfolio_resp = get_portfolio().get_json()
-    holdings = portfolio_resp["holdings"]
-    total = portfolio_resp["total_value"]
+    portfolio_data = build_portfolio_data()
+    holdings = portfolio_data["holdings"]
+    total = portfolio_data["total_value"]
 
     labels = [h["ticker"] for h in holdings] + ["Cash"]
     values = [round((h["value"] / total) * 100, 2) for h in holdings]
-    values.append(round((portfolio_resp["cash"] / total) * 100, 2))
+    values.append(round((portfolio_data["cash"] / total) * 100, 2))
 
     return jsonify({
         "labels": labels,
         "values": values,
-        "colors": ALLOCATION_COLORS[: len(labels)],
+        "colors": ALLOCATION_COLORS[:len(labels)],
     })
 
 
 @app.route("/api/movers", methods=["GET"])
 def get_movers():
     movers = []
+
     for ticker, stock in STOCKS.items():
         change_pct = round(random.gauss(0.4, stock["vol"] * 100 / 2), 2)
         price = round(stock["price"] * (1 + change_pct / 100), 2)
         volume = f"{round(random.uniform(10, 70), 1)}M"
+
         movers.append({
             "ticker": ticker,
             "name": stock["name"],
@@ -189,12 +202,14 @@ def get_transactions():
 @app.route("/api/indices", methods=["GET"])
 def get_indices():
     data = []
+
     for name, idx in INDICES.items():
         data.append({
             "name": name,
             "value": idx["value"],
             "change": idx["change"],
         })
+
     return jsonify(data)
 
 
