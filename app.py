@@ -1,10 +1,13 @@
-from flask import Flask, jsonify, redirect
-from flask_cors import CORS
+import os
 import random
 from datetime import datetime, timedelta
+from flask import Flask, jsonify, redirect, send_from_directory
+from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
+
+IS_VERCEL = os.getenv("VERCEL") == "1"
 
 random.seed(42)
 
@@ -100,7 +103,23 @@ def build_portfolio_data():
 
 @app.route("/")
 def home():
-    return redirect("/index.html", code=307)
+    if IS_VERCEL:
+        return redirect("/index.html", code=307)
+    return send_from_directory("public", "index.html")
+
+
+if not IS_VERCEL:
+    @app.route("/index.html")
+    def local_index():
+        return send_from_directory("public", "index.html")
+
+    @app.route("/css/<path:filename>")
+    def local_css(filename):
+        return send_from_directory("public/css", filename)
+
+    @app.route("/js/<path:filename>")
+    def local_js(filename):
+        return send_from_directory("public/js", filename)
 
 
 @app.route("/api/portfolio", methods=["GET"])
@@ -116,10 +135,15 @@ def get_chart(ticker):
         return jsonify({"error": "Ticker not found"}), 404
 
     stock = STOCKS[ticker]
-    prices = generate_price_series(stock["price"] * 0.88, days=30, volatility=stock["vol"])
+    prices = generate_price_series(
+        stock["price"] * 0.88,
+        days=30,
+        volatility=stock["vol"]
+    )
 
     dates = []
     start = datetime.now() - timedelta(days=29)
+
     for i in range(30):
         d = start + timedelta(days=i)
         dates.append(d.strftime("%d/%m"))
